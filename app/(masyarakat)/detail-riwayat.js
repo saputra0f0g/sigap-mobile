@@ -20,6 +20,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import laporanService from '../../services/laporanService';
 import MapTilerWebView from '../../components/MapTilerWebView';
 
+import { Linking } from 'react-native';
+
 const { width } = Dimensions.get('window');
 
 export default function HalamanDetailRiwayat() {
@@ -27,22 +29,44 @@ export default function HalamanDetailRiwayat() {
   const { id } = useLocalSearchParams();
   const [laporan, setLaporan] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const fetchDetail = () => {
     if (id) {
+      setLoading(true);
+      setError(null);
       laporanService.getDetail(id)
         .then(res => setLaporan(res.data || res))
-        .catch(err => console.log('Error fetch detail:', err))
+        .catch(err => setError(err.message || 'Gagal memuat detail laporan. Periksa koneksi Anda.'))
         .finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    fetchDetail();
   }, [id]);
 
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color="#3B466D" />
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
+        <Ionicons name="cloud-offline-outline" size={60} color="#94A3B8" />
+        <Text style={{ textAlign: 'center', color: '#EF4444', marginTop: 15, fontSize: 16 }}>{error}</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={fetchDetail}>
+          <Text style={styles.retryBtnText}>Coba Lagi</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={{ marginTop: 15 }} onPress={() => router.back()}>
+          <Text style={{ color: '#2563EB' }}>Kembali</Text>
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }
@@ -60,7 +84,7 @@ export default function HalamanDetailRiwayat() {
 
   // Helpers untuk UI status
   const isSelesai = laporan.status_raw === 'selesai';
-  const isProses  = ['diteruskan', 'proses'].includes(laporan.status_raw);
+  const isProses  = laporan.status_raw === 'diproses';
   const isTolak   = laporan.status_raw === 'ditolak';
 
   let statusTitle = "Menunggu Verifikasi";
@@ -221,7 +245,13 @@ export default function HalamanDetailRiwayat() {
           <Text style={styles.btnTextSecondary}>Kembali ke Dashboard</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.btnPrimary}>
+        <TouchableOpacity style={styles.btnPrimary} onPress={() => {
+          const phoneNumber = '6281234567890'; // Nomor petugas
+          const message = `Halo, saya pelapor untuk laporan dengan kode ${laporan.kode_laporan}. Saya ingin bertanya progresnya.`;
+          Linking.openURL(`whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(message)}`).catch(() => {
+            Alert.alert('Gagal', 'WhatsApp tidak terinstall.');
+          });
+        }}>
           <Text style={styles.btnTextPrimary}>Hubungi Petugas</Text>
         </TouchableOpacity>
       </View>
@@ -319,4 +349,15 @@ const styles = StyleSheet.create({
   btnPrimary: { flex: 1, height: 45, justifyContent: 'center', alignItems: 'center', borderRadius: 12, backgroundColor: '#FBBF24' },
   btnTextSecondary: { color: 'white', fontWeight: 'bold', fontSize: 12, textAlign: 'center' },
   btnTextPrimary: { color: '#3B466D', fontWeight: 'bold' }
+  retryBtn: {
+    marginTop: 20,
+    backgroundColor: '#3B466D',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
 });

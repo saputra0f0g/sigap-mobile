@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   View, Text, StyleSheet, ScrollView, TouchableOpacity, 
   Image, SafeAreaView, StatusBar, Platform, ActivityIndicator, Alert,
   RefreshControl
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import penugasanService from '../../services/penugasanService';
 import laporanService from '../../services/laporanService';
@@ -71,9 +71,15 @@ export default function DaftarKerjaScreen() {
   const [tugasList, setTugasList] = useState([]);
   const [statistik, setStatistik] = useState({ total: 0, selesai: 0, diproses: 0, menunggu: 0, terkendala: 0 });
 
-  useEffect(() => {
-    fetchData();
-  }, [activeFilter]);
+  // Auto-refresh setiap kali screen mendapat fokus:
+  // - Tab Tugas ditekan (pertama kali atau ulang)
+  // - Kembali dari detail-laporan atau update-progres
+  // - Filter tab berubah (activeFilter sebagai dependency)
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [activeFilter])
+  );
 
   const fetchData = async (isRefresh = false) => {
     if (!isRefresh) setLoading(true);
@@ -83,12 +89,12 @@ export default function DaftarKerjaScreen() {
       setStatistik(statRes);
 
       // Daftar tugas milik pekerja yang login — GET /api/pekerja/tugas
-      const params = {};
-      if (activeFilter) params.status = activeFilter;
-      const res = await penugasanService.getDaftarTugas(params);
+      const response = await penugasanService.getDaftarTugas({ status: activeFilter });
+      const rawData = response.data || response;
+      const dataArr = Array.isArray(rawData) ? rawData : (rawData?.data || []);
 
       // Petakan struktur penugasan ke format yang dipakai kartu
-      const mapped = (res.data ?? []).map(tugas => {
+      const mapped = dataArr.map(tugas => {
         const lap = tugas.laporan ?? {};
         return {
           id:          tugas.id,          // ID penugasan
@@ -106,15 +112,15 @@ export default function DaftarKerjaScreen() {
       });
 
       setTugasList(mapped);
-    } catch (error) {
-      console.log('Error fetch tugas pekerja:', error.message);
-      Alert.alert('Error', 'Gagal memuat tugas: ' + error.message);
+    } catch (err) {
+      console.log('Error fetch tugas pekerja:', err.message);
+      setError(err.message || 'Gagal memuat daftar tugas.');
     } finally {
       if (!isRefresh) setLoading(false);
     }
   };
 
-  const onRefresh = React.useCallback(async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchData(true);
     setRefreshing(false);
@@ -156,9 +162,22 @@ export default function DaftarKerjaScreen() {
           ))}
         </ScrollView>
 
-        {/* Loading */}
+        {/* Loading / Error / Content */}
         {loading ? (
-          <ActivityIndicator color={colors.primary} size="large" style={{ marginVertical: 40 }} />
+          <View style={{ marginTop: 50 }}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : error ? (
+          <View style={{ alignItems: 'center', marginTop: 50, padding: 20 }}>
+            <MaterialIcons name="cloud-off" size={60} color={colors.outlineVariant} />
+            <Text style={{ textAlign: 'center', color: colors.error, marginTop: 15, fontSize: 16 }}>{error}</Text>
+            <TouchableOpacity
+              style={{ marginTop: 20, backgroundColor: colors.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 }}
+              onPress={() => fetchData(false)}
+            >
+              <Text style={{ color: '#fff', fontWeight: 'bold' }}>Coba Lagi</Text>
+            </TouchableOpacity>
+          </View>
         ) : tugasList.length === 0 ? (
           <View style={styles.emptyState}>
             <MaterialIcons name="assignment" size={48} color={colors.outlineVariant} />

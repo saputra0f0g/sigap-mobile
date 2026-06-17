@@ -72,7 +72,7 @@ export default function HalamanKirimLaporan() {
       setSearchQuery(addr);
       // mapRef dihapus — pan peta tidak diperlukan (WebView update otomatis via props)
     } catch (e) {
-      Alert.alert('Error GPS', e.message || 'Gagal mendapatkan lokasi');
+      Alert.alert('Gagal GPS', e.message || 'Gagal mendapatkan lokasi');
     } finally {
       setLocLoading(false);
     }
@@ -109,7 +109,7 @@ export default function HalamanKirimLaporan() {
       const addr = [p.street, p.name, p.city].filter(Boolean).join(', ') || searchQuery.trim();
       setLocation({ latitude, longitude, address: addr, confirmed: true });
     } catch (e) {
-      Alert.alert('Error', 'Gagal mencari lokasi: ' + e.message);
+      Alert.alert('Gagal', 'Gagal mencari lokasi: ' + e.message);
     } finally {
       setSearching(false);
     }
@@ -122,7 +122,7 @@ export default function HalamanKirimLaporan() {
       ? await ImagePicker.requestCameraPermissionsAsync()
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('Izin Ditolak', `Butuh akses ${camera ? 'kamera' : 'galeri'}`); return;
+      Alert.alert('Izin Ditolak', `Butuh akses ${camera ? 'kamera' : 'galeri'}. Silakan aktifkan di Pengaturan perangkat Anda.`); return;
     }
     const res = camera
       ? await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true })
@@ -132,9 +132,9 @@ export default function HalamanKirimLaporan() {
 
   // ── Submit ke API ─────────────────────────────────────────────────────────
   const submit = async () => {
-    if (!judul.trim())         return Alert.alert('Error', 'Judul tidak boleh kosong');
-    if (!deskripsi.trim())     return Alert.alert('Error', 'Deskripsi tidak boleh kosong');
-    if (mediaFiles.length < 1) return Alert.alert('Error', 'Unggah minimal 1 foto bukti');
+    if (!judul.trim())         return Alert.alert('Validasi', 'Judul tidak boleh kosong');
+    if (!deskripsi.trim())     return Alert.alert('Validasi', 'Deskripsi tidak boleh kosong');
+    if (mediaFiles.length < 1) return Alert.alert('Validasi', 'Unggah minimal 1 foto bukti');
 
     setLoading(true);
     try {
@@ -145,6 +145,7 @@ export default function HalamanKirimLaporan() {
       const res = await laporanService.buatLaporan({
         judul:     judul.trim(),
         deskripsi: deskripsi.trim(),
+        kategori:  'Umum', // kategori default; admin akan menetapkan bidang setelah menerima laporan
         latitude:  location.confirmed ? location.latitude  : null,
         longitude: location.confirmed ? location.longitude : null,
         alamat,
@@ -227,8 +228,8 @@ export default function HalamanKirimLaporan() {
             <TouchableOpacity
               style={[s.btnPrimary, (!judul.trim() || !deskripsi.trim()) && s.btnDisabled]}
               onPress={() => {
-                if (!judul.trim())     return Alert.alert('', 'Isi judul dahulu');
-                if (!deskripsi.trim()) return Alert.alert('', 'Isi deskripsi dahulu');
+                if (!judul.trim())     return Alert.alert('Validasi', 'Isi judul dahulu');
+                if (!deskripsi.trim()) return Alert.alert('Validasi', 'Isi deskripsi dahulu');
                 setActiveTab(2);
               }}
             >
@@ -241,7 +242,7 @@ export default function HalamanKirimLaporan() {
         {/* ══ TAB 2: MEDIA ════════════════════════════════════════════════════ */}
         {activeTab === 2 && (
           <View>
-            <Text style={s.label}>Foto Bukti ({mediaFiles.length}/3) *</Text>
+            <Text style={s.label}>Foto Bukti {mediaFiles.length === 0 ? 'Unggah minimal 1 foto' : `(${mediaFiles.length}/3)`} *</Text>
             <View style={s.uploadRow}>
               <TouchableOpacity style={s.uploadCard} onPress={() => pickImage(true)}>
                 <Icon name="camera" size={30} color="#1F3B6D" />
@@ -279,7 +280,7 @@ export default function HalamanKirimLaporan() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.btnPrimarySmall, mediaFiles.length === 0 && s.btnDisabled]}
-                onPress={() => mediaFiles.length > 0 ? setActiveTab(3) : Alert.alert('', 'Upload minimal 1 foto')}
+                onPress={() => mediaFiles.length > 0 ? setActiveTab(3) : Alert.alert('Validasi', 'Unggah minimal 1 foto')}
               >
                 <Text style={s.btnText}>Lanjut ke Lokasi</Text>
                 <Icon name="arrow-right" size={18} color="#fff" />
@@ -303,7 +304,7 @@ export default function HalamanKirimLaporan() {
                   ? <ActivityIndicator size="small" color="#2563EB" />
                   : <Icon name="crosshairs-gps" size={13} color="#2563EB" />}
                 <Text style={s.gpsLinkText}>
-                  {locLoading ? 'Mendapatkan...' : 'Gunakan Lokasi Saat Ini'}
+                  {!judul || !deskripsi ? 'Isi judul dan deskripsi dahulu' : 'Gunakan Lokasi Saat Ini'}
                 </Text>
               </TouchableOpacity>
             </View>

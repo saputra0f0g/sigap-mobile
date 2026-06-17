@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Image, SafeAreaView, StatusBar, Platform, ActivityIndicator,
   RefreshControl
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import penugasanService from '../../services/penugasanService';
 import MapTilerWebView from '../../components/MapTilerWebView';
 
@@ -46,26 +46,34 @@ export default function DetailTugasScreen() {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
   const [penugasan, setPenugasan] = useState(null);
 
-  useEffect(() => {
-    if (id) fetchDetail();
-  }, [id]);
+  // Auto-refresh setiap kali screen detail mendapat fokus:
+  // - Pertama kali dibuka dari daftar tugas
+  // - Kembali dari update-progres (data status/bukti terbaru langsung muncul)
+  useFocusEffect(
+    useCallback(() => {
+      if (id) fetchDetail();
+    }, [id])
+  );
 
   const fetchDetail = async (isRefresh = false) => {
     try {
       if (!isRefresh) setLoading(true);
+      setError(null);
       // GET /api/pekerja/tugas/:id  — detail penugasan lengkap dengan laporan & bukti
       const res = await penugasanService.getDetailTugas(id);
       setPenugasan(res);
-    } catch (error) {
-      console.log('Error fetch detail tugas:', error.message);
+    } catch (err) {
+      console.log('Error fetch detail tugas:', err.message);
+      setError(err.message || 'Gagal memuat detail tugas. Periksa koneksi Anda.');
     } finally {
       if (!isRefresh) setLoading(false);
     }
   };
 
-  const onRefresh = React.useCallback(async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchDetail(true);
     setRefreshing(false);
@@ -75,6 +83,24 @@ export default function DetailTugasScreen() {
     return (
       <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color={colors.primary} />
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
+        <MaterialIcons name="cloud-off" size={60} color={colors.outlineVariant} />
+        <Text style={{ textAlign: 'center', color: colors.error, marginTop: 15, fontSize: 16 }}>{error}</Text>
+        <TouchableOpacity
+          style={{ marginTop: 20, backgroundColor: colors.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 }}
+          onPress={() => fetchDetail(false)}
+        >
+          <Text style={{ color: '#fff', fontWeight: 'bold' }}>Coba Lagi</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 20 }}>
+          <Text style={{ color: colors.primary, fontWeight: 'bold' }}>← Kembali</Text>
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }

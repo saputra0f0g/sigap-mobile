@@ -68,6 +68,24 @@ const parseError = async (response) => {
   }
 };
 
+// ─── HELPER: Map HTTP status ke pesan Indonesia ───────────────────────────────
+const mapHttpError = (status) => {
+  switch (status) {
+    case 400: return 'Permintaan tidak valid. Periksa data yang dikirim.';
+    case 401: return 'Sesi berakhir. Silakan login kembali.';
+    case 403: return 'Akses ditolak. Anda tidak memiliki izin untuk tindakan ini.';
+    case 404: return 'Data tidak ditemukan.';
+    case 408: return 'Waktu permintaan habis. Periksa koneksi internet.';
+    case 409: return 'Konflik data. Data yang Anda kirim sudah ada atau bentrok.';
+    case 422: return null; // akan diisi dari body validasi Laravel
+    case 429: return 'Terlalu banyak permintaan. Tunggu sebentar dan coba lagi.';
+    case 500: return 'Terjadi kesalahan di server. Coba lagi nanti.';
+    case 502: return 'Server tidak dapat dijangkau (502). Coba lagi nanti.';
+    case 503: return 'Layanan tidak tersedia sementara. Coba beberapa saat lagi.';
+    default:  return `Terjadi kesalahan (${status}). Silakan coba lagi.`;
+  }
+};
+
 // ─── CORE REQUEST FUNCTION ────────────────────────────────────────────────────
 const request = async (method, endpoint, body = null, isMultipart = false) => {
   const headers = await buildHeaders(isMultipart);
@@ -91,16 +109,36 @@ const request = async (method, endpoint, body = null, isMultipart = false) => {
       throw new Error('Sesi berakhir. Silakan login kembali.');
     }
 
+    // 403 → tidak punya akses
+    if (response.status === 403) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.message || 'Akses ditolak. Anda tidak memiliki izin untuk tindakan ini.');
+    }
+
+    // 404 → tidak ditemukan
+    if (response.status === 404) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.message || 'Data tidak ditemukan.');
+    }
+
     // 422 → Validation error dari Laravel
     if (response.status === 422) {
       const msg = await parseError(response);
       throw new Error(msg);
     }
 
+    // 5xx → Server error
+    if (response.status >= 500) {
+      const fallback = mapHttpError(response.status);
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.message || fallback);
+    }
+
     // Error lain dari server
     if (!response.ok) {
       const msg = await parseError(response);
-      throw new Error(msg);
+      const fallback = mapHttpError(response.status);
+      throw new Error(msg || fallback);
     }
 
     // 204 No Content
@@ -110,8 +148,9 @@ const request = async (method, endpoint, body = null, isMultipart = false) => {
   } catch (error) {
     // Network error (tidak ada koneksi / server mati)
     if (error.message === 'Network request failed') {
-      throw new Error('Tidak dapat terhubung ke server. Periksa IP Laravel dan koneksi WiFi.');
+      throw new Error('Tidak dapat terhubung ke server. Periksa koneksi internet Anda.');
     }
+    // Lempar kembali error yang sudah diformat
     throw error;
   }
 };

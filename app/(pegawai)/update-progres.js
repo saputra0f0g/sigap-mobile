@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Image, SafeAreaView, StatusBar, TextInput, Platform,
   ActivityIndicator, Alert
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import penugasanService from '../../services/penugasanService';
 
@@ -48,6 +48,7 @@ export default function UpdateProgresScreen() {
   const [photo, setPhoto] = useState(null);
   const [keteranganFoto, setKeteranganFoto] = useState('');
 
+  // Fetch data saat pertama dibuka
   useEffect(() => {
     if (id) fetchDetail();
   }, [id]);
@@ -143,8 +144,13 @@ export default function UpdateProgresScreen() {
         });
       }
 
-      Alert.alert('Sukses', 'Update progres berhasil disimpan.', [
-        { text: 'OK', onPress: () => router.back() }
+      Alert.alert('Berhasil! ✓', 'Update progres berhasil disimpan.', [
+        {
+          text: 'Kembali ke Detail',
+          // router.back() sudah cukup — useFocusEffect di detail-laporan
+          // akan otomatis trigger fetchDetail() saat screen kembali mendapat fokus
+          onPress: () => router.back()
+        }
       ]);
     } catch (err) {
       console.log('Update Error:', err.message);

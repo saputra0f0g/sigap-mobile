@@ -132,7 +132,7 @@ export default function HalamanRiwayat() {
       }
     } catch (e) {
       console.warn('[Riwayat] Error:', e.message);
-      setError('Gagal memuat data. Periksa koneksi internet.');
+      setError(e.message || 'Gagal memuat data. Periksa koneksi internet.');
     } finally {
       setLoading(false);
       setRefreshing(false);

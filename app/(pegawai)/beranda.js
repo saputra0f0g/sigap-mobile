@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import laporanService from '../../services/laporanService';
 import penugasanService from '../../services/penugasanService';
@@ -21,7 +21,6 @@ import MapTilerWebView from '../../components/MapTilerWebView';
 
 const { width } = Dimensions.get('window');
 
-const TUGAS_PRIORITAS = []; // We will use state now
 
 export default function DashboardPegawai() {
   const router = useRouter();
@@ -31,12 +30,18 @@ export default function DashboardPegawai() {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [statistik, setStatistik] = useState({ total: 0, menunggu: 0, diproses: 0, selesai: 0, ditolak: 0, bidang: { bina_marga: 0, sda: 0, cipta_karya: 0 } });
+  const [statistik, setStatistik] = useState({ total: 0, menunggu: 0, diproses: 0, selesai: 0, ditolak: 0, terkendala: 0, bidang: { bina_marga: 0, sda: 0, cipta_karya: 0 } });
   const [laporanList, setLaporanList] = useState([]);
 
-  React.useEffect(() => {
-    fetchDashboardData();
-  }, [activeFilter]);
+  // Auto-refresh setiap kali screen ini mendapat fokus:
+  // - Saat tab Beranda ditekan (baik pertama kali maupun ulang)
+  // - Saat kembali dari halaman detail/update-progres
+  // - Saat filter beranda diubah (activeFilter menjadi dependency-nya)
+  useFocusEffect(
+    useCallback(() => {
+      fetchDashboardData();
+    }, [activeFilter])
+  );
 
   const fetchDashboardData = async (isRefresh = false) => {
     if (!isRefresh) setLoading(true);
@@ -84,7 +89,7 @@ export default function DashboardPegawai() {
     }
   };
 
-  const onRefresh = React.useCallback(async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchDashboardData(true);
     setRefreshing(false);

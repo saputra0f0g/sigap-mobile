@@ -10,6 +10,7 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -70,15 +71,15 @@ const ProfileScreen = () => {
 
   const handleGantiPassword = async () => {
     if (!passwordData.current || !passwordData.new || !passwordData.confirm) {
-      Alert.alert('Error', 'Semua field password harus diisi');
+      Alert.alert('Gagal', 'Semua kolom kata sandi harus diisi');
       return;
     }
     if (passwordData.new !== passwordData.confirm) {
-      Alert.alert('Error', 'Konfirmasi password tidak cocok');
+      Alert.alert('Gagal', 'Konfirmasi kata sandi tidak cocok');
       return;
     }
-    if (passwordData.new.length < 6) {
-      Alert.alert('Error', 'Password baru minimal 6 karakter');
+    if (passwordData.new.length < 8) {
+      Alert.alert('Gagal', 'Kata sandi baru minimal 8 karakter');
       return;
     }
     setSavingPassword(true);
@@ -88,7 +89,7 @@ const ProfileScreen = () => {
         newPassword:     passwordData.new,
         confirmPassword: passwordData.confirm,
       });
-      Alert.alert('Berhasil', 'Password berhasil diubah!');
+      Alert.alert('Berhasil', 'Kata sandi berhasil diubah!');
       setPasswordData({ current: '', new: '', confirm: '' });
       setShowDropdown((prev) => ({ ...prev, password: false }));
     } catch (e) {
@@ -296,7 +297,13 @@ const ProfileScreen = () => {
           <Text style={styles.helpTitle}>Hubungi Kami</Text>
           <TouchableOpacity
             style={styles.helpButton}
-            onPress={() => Alert.alert('WhatsApp Admin')}
+            onPress={() => {
+              const phoneNumber = '6281234567890'; // Ganti dengan nomor admin yang sebenarnya
+              const message = 'Halo Admin SIGAP, saya ingin bertanya terkait aplikasi.';
+              Linking.openURL(`whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(message)}`).catch(() => {
+                Alert.alert('Gagal', 'Aplikasi WhatsApp tidak terinstall di perangkat Anda.');
+              });
+            }}
           >
             <Ionicons name="logo-whatsapp" size={24} color="#25D366" />
             <View style={styles.helpButtonText}>

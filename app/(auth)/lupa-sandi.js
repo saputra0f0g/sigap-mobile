@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,8 +11,9 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import authService from '../../services/authService';
 
 const HalamanLupaKataSandi = () => {
   const router = useRouter();
@@ -53,39 +54,13 @@ const HalamanLupaKataSandi = () => {
     setLoading(true);
 
     try {
-      // Simulasi API Call
-      setTimeout(() => {
-        setLoading(false);
-        // Navigasi ke halaman masukan kode pemulihan
-        router.push('/(auth)/kode-pemulihan', { email: email });
-      }, 1500);
-
-      // Uncomment untuk API call yang sebenarnya:
-      /*
-      const response = await fetch('https://api.example.com/forgot-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setLoading(false);
-        navigation.navigate('/(auth)/kode-pemulihan', { email: email });
-      } else {
-        setLoading(false);
-        Alert.alert('Error', data.message || 'Gagal mengirim kode pemulihan');
-      }
-      */
+      await authService.forgotPassword({ email });
+      router.push({ pathname: '/(auth)/kode-pemulihan', params: { email } });
     } catch (error) {
-      setLoading(false);
-      Alert.alert('Error', 'Terjadi kesalahan. Silakan coba lagi.');
+      Alert.alert('Gagal', error.message || 'Terjadi kesalahan. Silakan coba lagi.');
       console.error('Forgot password error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -108,7 +83,7 @@ const HalamanLupaKataSandi = () => {
           <TouchableOpacity onPress={handleKembaliLogin} disabled={loading}>
             <Icon name="arrow-left" size={24} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Riset Kata Sandi</Text>
+          <Text style={styles.headerTitle}>Reset Kata Sandi</Text>
           <View style={{ width: 24 }} />
         </View>
 

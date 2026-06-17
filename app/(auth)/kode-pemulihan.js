@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,12 +11,12 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import authService from '../../services/authService';
 
 const HalamanKodePemulihan = () => {
   const router = useRouter();
-  const { params } = useRouter();
   const [codes, setCodes] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState('');
@@ -73,46 +73,13 @@ const HalamanKodePemulihan = () => {
     setLoading(true);
 
     try {
-      // Simulasi API Call
-      setTimeout(() => {
-        setLoading(false);
-        // Navigasi ke halaman atur ulang kata sandi
-        router.push('/(auth)/atur-ulang-sandi', { 
-          email: email, 
-          code: fullCode 
-        });
-      }, 1500);
-
-      // Uncomment untuk API call yang sebenarnya:
-      /*
-      const response = await fetch('https://api.example.com/verify-code', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email,
-          code: fullCode,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setLoading(false);
-        navigation.navigate('HalamanAturUlangKataSandi', { 
-          email: email, 
-          code: fullCode 
-        });
-      } else {
-        setLoading(false);
-        setErrors(data.message || 'Kode tidak valid');
-      }
-      */
+      await authService.verifyOtp({ email, code: fullCode });
+      router.push({ pathname: '/(auth)/atur-ulang-sandi', params: { email, code: fullCode } });
     } catch (error) {
-      setLoading(false);
-      setErrors('Terjadi kesalahan. Silakan coba lagi.');
+      Alert.alert('Gagal', error.message || 'Kode tidak valid. Silakan coba lagi.');
       console.error('Verify code error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -121,41 +88,17 @@ const HalamanKodePemulihan = () => {
     if (!canResend) return;
 
     setLoading(true);
-    setCanResend(false);
-    setTimer(60);
-    setCodes(['', '', '', '', '', '']);
-
     try {
-      // Simulasi API Call
-      setTimeout(() => {
-        setLoading(false);
-        Alert.alert('Berhasil', 'Kode pemulihan telah dikirim ulang');
-      }, 1000);
-
-      // Uncomment untuk API call yang sebenarnya:
-      /*
-      const response = await fetch('https://api.example.com/resend-code', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email,
-        }),
-      });
-
-      if (response.ok) {
-        setLoading(false);
-        Alert.alert('Berhasil', 'Kode pemulihan telah dikirim ulang');
-      } else {
-        setLoading(false);
-        Alert.alert('Error', 'Gagal mengirim ulang kode');
-      }
-      */
+      await authService.forgotPassword({ email });
+      Alert.alert('Berhasil', 'Kode pemulihan telah dikirim ulang');
+      setTimer(60);
+      setCanResend(false);
+      setCodes(['', '', '', '', '', '']);
     } catch (error) {
-      setLoading(false);
-      Alert.alert('Error', 'Terjadi kesalahan. Silakan coba lagi.');
+      Alert.alert('Gagal', error.message || 'Gagal mengirim ulang kode');
       console.error('Resend code error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 

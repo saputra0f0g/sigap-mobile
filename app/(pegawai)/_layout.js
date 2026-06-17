@@ -7,6 +7,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform, Image } from 'react
 import { Tabs } from 'expo-router';
 import { MaterialCommunityIcons, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from '../../context/AuthContext';
 
 const colors = {
   primary: '#001e57',
@@ -16,6 +17,7 @@ const colors = {
 
 function CustomHeader({ route, options, navigation }) {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const title = options.headerTitle !== undefined ? options.headerTitle : options.title;
   const isDetail = route.name === 'detail-laporan' || route.name === 'update-progres';
   
@@ -28,7 +30,10 @@ function CustomHeader({ route, options, navigation }) {
           </TouchableOpacity>
         ) : (
           <Image 
-            source={{ uri: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=100&q=80' }} 
+            source={user?.foto_url
+              ? { uri: user.foto_url }
+              : require('../../assets/images/LOGO-PUPR2.png')
+            }
             style={styles.profilePic} 
           />
         )}

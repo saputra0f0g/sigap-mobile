@@ -112,7 +112,7 @@ const HalamanBeranda = () => {
 
   // 5 laporan terbaru untuk STATUS PROYEK
   const laporanTerbaru = laporanList.slice(0, 5);
-  console.log("Koordinat Region:", mapRegion)
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1F3B6D" />

@@ -29,42 +29,69 @@ const HalamanRegister = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({
+    fullName: '', username: '', email: '', phone: '', password: '', confirmPassword: '',
+  });
+
+  const setError = (field, msg) =>
+    setFieldErrors((prev) => ({ ...prev, [field]: msg }));
+
+  const clearError = (field) =>
+    setFieldErrors((prev) => ({ ...prev, [field]: '' }));
 
   const handleRegister = async () => {
-    // ── Validasi field kosong ──────────────────────────────────────────────
-    if (!fullName || !username || !email || !phone || !password || !confirmPassword) {
-      Alert.alert('Error', 'Silahkan isi semua kolom yang tersedia');
-      return;
-    }
+    // ── Reset errors ──────────────────────────────────────────────────────────
+    const errs = { fullName: '', username: '', email: '', phone: '', password: '', confirmPassword: '' };
+    let hasError = false;
 
-    // ── Validasi format email ──────────────────────────────────────────────
+    if (!fullName.trim()) {
+      errs.fullName = 'Nama lengkap wajib diisi';
+      hasError = true;
+    }
+    if (!username.trim()) {
+      errs.username = 'Username wajib diisi';
+      hasError = true;
+    } else if (username.trim().length < 3) {
+      errs.username = 'Username minimal 3 karakter';
+      hasError = true;
+    }
     const emailRegex = /\S+@\S+\.\S+/;
-    if (!emailRegex.test(email)) {
-      Alert.alert('Error', 'Format email tidak valid');
-      return;
+    if (!email.trim()) {
+      errs.email = 'Email wajib diisi';
+      hasError = true;
+    } else if (!emailRegex.test(email)) {
+      errs.email = 'Format email tidak valid';
+      hasError = true;
+    }
+    if (!phone.trim()) {
+      errs.phone = 'Nomor WhatsApp wajib diisi';
+      hasError = true;
+    } else if (phone.length < 10) {
+      errs.phone = 'Nomor WhatsApp minimal 10 digit';
+      hasError = true;
+    }
+    if (!password) {
+      errs.password = 'Kata sandi wajib diisi';
+      hasError = true;
+    } else if (password.length < 8) {
+      errs.password = 'Kata sandi minimal 8 karakter';
+      hasError = true;
+    }
+    if (!confirmPassword) {
+      errs.confirmPassword = 'Konfirmasi kata sandi wajib diisi';
+      hasError = true;
+    } else if (password !== confirmPassword) {
+      errs.confirmPassword = 'Konfirmasi kata sandi tidak cocok';
+      hasError = true;
     }
 
-    // ── Validasi nomor HP ──────────────────────────────────────────────────
-    if (phone.length < 10) {
-      Alert.alert('Error', 'Nomor WhatsApp minimal 10 digit');
-      return;
-    }
-
-    // ── Validasi kecocokan password ────────────────────────────────────────
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Konfirmasi kata sandi tidak cocok');
-      return;
-    }
-
-    if (password.length < 6) {
-      Alert.alert('Error', 'Kata sandi minimal 6 karakter');
-      return;
-    }
+    setFieldErrors(errs);
+    if (hasError) return;
 
     // ── Kirim ke API Laravel ───────────────────────────────────────────────
     setLoading(true);
     try {
-      const response = await authService.register({
+      await authService.register({
         name: fullName,
         username: username,
         email: email,
@@ -85,8 +112,8 @@ const HalamanRegister = () => {
         ]
       );
     } catch (error) {
-      console.log("VALIDATION ERROR:", error.message);
-      Alert.alert("Gagal Daftar", error.message);
+      // Error dari API (misal: email sudah ada, username sudah ada)
+      Alert.alert('Gagal Mendaftar', error.message || 'Terjadi kesalahan. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }

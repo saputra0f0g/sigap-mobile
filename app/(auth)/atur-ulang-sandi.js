@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,12 +11,12 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import authService from '../../services/authService';
 
 const HalamanAturUlangKataSandi = () => {
   const router = useRouter();
-  const { params } = useRouter();
   const [passwordBaru, setPasswordBaru] = useState('');
   const [passwordKonfirmasi, setPasswordKonfirmasi] = useState('');
   const [showPasswordBaru, setShowPasswordBaru] = useState(false);
@@ -64,7 +64,7 @@ const HalamanAturUlangKataSandi = () => {
       return;
     }
     if (!validatePassword(passwordBaru)) {
-      setErrors({ ...errors, baru: 'Password minimal 8 karakter' });
+      setErrors({ ...errors, baru: 'Kata sandi minimal 8 karakter' });
       return;
     }
     if (!passwordKonfirmasi) {
@@ -72,53 +72,30 @@ const HalamanAturUlangKataSandi = () => {
       return;
     }
     if (passwordBaru !== passwordKonfirmasi) {
-      setErrors({ ...errors, konfirmasi: 'Password tidak cocok' });
+      setErrors({ ...errors, konfirmasi: 'Kata sandi tidak cocok' });
       return;
     }
 
     setLoading(true);
 
     try {
-      // Simulasi API Call
-      setTimeout(() => {
-        setLoading(false);
-        Alert.alert('Berhasil', 'Kata sandi berhasil diperbarui');
-        // Navigasi ke halaman login atau halaman sukses
-        navigation.navigate('/(auth)/sukses', { 
-          message: 'Kata sandi Anda telah berhasil diperbarui',
-          nextScreen: '/(auth)/login'
-        });
-      }, 1500);
-
-      // Uncomment untuk API call yang sebenarnya:
-      /*
-      const response = await fetch('https://api.example.com/reset-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email,
-          code: code,
-          password: passwordBaru,
-        }),
+      await authService.resetPassword({
+        email,
+        code,
+        password: passwordBaru,
+        passwordConfirmation: passwordKonfirmasi,
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setLoading(false);
-        Alert.alert('Berhasil', 'Kata sandi berhasil diperbarui');
-        navigation.navigate('/(auth)/login');
-      } else {
-        setLoading(false);
-        Alert.alert('Error', data.message || 'Gagal memperbarui kata sandi');
-      }
-      */
+      Alert.alert('Berhasil', 'Kata sandi berhasil diperbarui', [
+        {
+          text: 'OK',
+          onPress: () => router.replace('/(auth)/sukses'),
+        },
+      ]);
     } catch (error) {
-      setLoading(false);
-      Alert.alert('Error', 'Terjadi kesalahan. Silakan coba lagi.');
+      Alert.alert('Gagal', error.message || 'Terjadi kesalahan. Silakan coba lagi.');
       console.error('Reset password error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -217,11 +194,11 @@ const HalamanAturUlangKataSandi = () => {
             ) : null}
           </View>
 
-          {/* Catatan Password */}
+          {/* Catatan Kata sandi */}
           <View style={styles.noteContainer}>
             <Icon name="information-outline" size={16} color="#1F3B6D" />
             <Text style={styles.noteText}>
-              Password harus minimal 8 karakter dan kombinasi huruf, angka, dan simbol
+              Kata sandi harus minimal 8 karakter dan berisi kombinasi huruf dan angka untuk keamanan akun Anda.
             </Text>
           </View>
 

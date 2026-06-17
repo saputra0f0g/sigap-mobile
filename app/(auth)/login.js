@@ -16,7 +16,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 
@@ -103,7 +103,7 @@ const HalamanLogin = () => {
         </View>
 
         <View style={styles.welcomeContainer}>
-          <Text style={styles.welcomeTitle}>Selamat Datinggng!</Text>
+          <Text style={styles.welcomeTitle}>Selamat Datang!</Text>
           <Text style={styles.welcomeSubtitle}>Silahkan masuk untuk melanjutkan</Text>
         </View>
 
