@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Projec2",
+    "name": "SIGAP",
     "slug": "Projec2",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -38,7 +38,15 @@
           }
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "SIGAP memerlukan akses galeri untuk memilih foto profil.",
+          "cameraPermission": "SIGAP memerlukan akses kamera untuk mengambil foto laporan."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

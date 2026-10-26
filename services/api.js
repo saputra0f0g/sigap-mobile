@@ -1,37 +1,60 @@
 /**
- * services/api.js
  * Base HTTP client untuk semua request ke Laravel API.
- *
- * Fitur:
- * - Base URL terpusat (ganti IP di sini saja)
- * - Attach Bearer token otomatis dari AsyncStorage
- * - Response interceptor: tangani 401 Unauthorized (token expired)
- * - Timeout 15 detik
- * - Error handler terpusat → lempar pesan Indonesia
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
-// ─── KONFIGURASI ──────────────────────────────────────────────────────────────
-// Ganti IP_LAPTOP dengan IP komputer/laptop kamu di jaringan WiFi yang sama.
-// Cek dengan perintah: ipconfig (Windows) atau ifconfig (Mac/Linux)
-// Contoh: '192.168.1.105'
+const TIMEOUT_MS = 15000;
+const TOKEN_KEY = 'sigap_auth_token';
+const USER_KEY = 'sigap_user';
 
-export const BASE_URL = 
-  `https://sigap-web-production-8e80.up.railway.app/api`;
+const getExpoHost = () => {
+  const hostUri =
+    Constants.expoConfig?.hostUri ?? Constants.manifest?.debuggerHost;
 
-const TIMEOUT_MS = 15000; // 15 detik
+  if (!hostUri) return null;
 
-// ─── HELPER: Ambil token dari storage 
-const getToken = async () => {
-  return await AsyncStorage.getItem('sigap_auth_token');
+  const hostWithoutScheme = hostUri.replace(/^[a-z]+:\/\//i, '');
+  const ipv6Match = hostWithoutScheme.match(/^\[([^\]]+)\]/);
+  const host = ipv6Match ? ipv6Match[1] : hostWithoutScheme.split(':')[0];
+
+  return host || null;
 };
 
-// ─── HELPER: Buat headers standard 
+const withApiPrefix = (url) => {
+  const normalizedUrl = url.replace(/\/+$/, '');
+  return /\/api$/i.test(normalizedUrl)
+    ? normalizedUrl
+    : `${normalizedUrl}/api`;
+};
+
+const configuredUrl = process.env.EXPO_PUBLIC_API_URL;
+const developmentUrl = `http://${getExpoHost() || '10.107.249.189 '}:8003/api`;
+
+export const BASE_URL = withApiPrefix(
+  configuredUrl || (__DEV__ ? developmentUrl : 'http://sigap-web.test/api')
+);  
+
+export const getPublicFileUrl = (file) => {
+  const value = typeof file === 'string' ? file : file?.url ?? file?.path;
+  if (!value) return null;
+
+  const apiOrigin = BASE_URL.replace(/\/api\/?$/, '');
+  const localHostUrl = value.match(/^https?:\/\/(?:localhost|127\.0\.0\.1|[^/]+\.test)(?::\d+)?(\/.*)$/i);
+  if (localHostUrl) return `${apiOrigin}${localHostUrl[1]}`;
+  if (/^https?:\/\//i.test(value)) return value;
+
+  const path = value.replace(/^\/+/, '').replace(/^storage\//i, '');
+  return `${apiOrigin}/storage/${path}`;
+};
+
+const getToken = () => AsyncStorage.getItem(TOKEN_KEY);
+
 const buildHeaders = async (isMultipart = false) => {
   const token = await getToken();
   const headers = {
-    'Accept': 'application/json',
+    Accept: 'application/json',
   };
 
   if (!isMultipart) {
@@ -39,123 +62,127 @@ const buildHeaders = async (isMultipart = false) => {
   }
 
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    headers.Authorization = `Bearer ${token}`;
   }
 
   return headers;
 };
 
-// ─── HELPER: Timeout wrapper 
-const withTimeout = (promise, ms = TIMEOUT_MS) => {
-  const timeout = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('Request timeout. Periksa koneksi internet.')), ms)
-  );
-  return Promise.race([promise, timeout]);
+const withTimeout = async (promise, ms = TIMEOUT_MS) => {
+  let timeoutId;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timeoutId = setTimeout(
+          () => reject(new Error('Request timeout. Periksa koneksi internet.')),
+          ms
+        );
+      }),
+    ]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 };
 
-// ─── HELPER: Parse error response ────────────────────────────────────────────
 const parseError = async (response) => {
   try {
     const data = await response.json();
-    // Laravel validation errors: { errors: { field: ['message'] } }
     if (data.errors) {
       const firstError = Object.values(data.errors)[0];
       return Array.isArray(firstError) ? firstError[0] : String(firstError);
     }
-    return data.message || `Error ${response.status}`;
+
+    return (
+      data.message ||
+      mapHttpError(response.status) ||
+      `Error ${response.status}`
+    );
   } catch {
-    return `HTTP Error ${response.status}`;
+    return mapHttpError(response.status) || `HTTP Error ${response.status}`;
   }
 };
 
-// ─── HELPER: Map HTTP status ke pesan Indonesia ───────────────────────────────
 const mapHttpError = (status) => {
   switch (status) {
-    case 400: return 'Permintaan tidak valid. Periksa data yang dikirim.';
-    case 401: return 'Sesi berakhir. Silakan login kembali.';
-    case 403: return 'Akses ditolak. Anda tidak memiliki izin untuk tindakan ini.';
-    case 404: return 'Data tidak ditemukan.';
-    case 408: return 'Waktu permintaan habis. Periksa koneksi internet.';
-    case 409: return 'Konflik data. Data yang Anda kirim sudah ada atau bentrok.';
-    case 422: return null; // akan diisi dari body validasi Laravel
-    case 429: return 'Terlalu banyak permintaan. Tunggu sebentar dan coba lagi.';
-    case 500: return 'Terjadi kesalahan di server. Coba lagi nanti.';
-    case 502: return 'Server tidak dapat dijangkau (502). Coba lagi nanti.';
-    case 503: return 'Layanan tidak tersedia sementara. Coba beberapa saat lagi.';
-    default:  return `Terjadi kesalahan (${status}). Silakan coba lagi.`;
+    case 400:
+      return 'Permintaan tidak valid. Periksa data yang dikirim.';
+    case 401:
+      return 'Sesi berakhir. Silakan login kembali.';
+    case 403:
+      return 'Akses ditolak. Anda tidak memiliki izin untuk tindakan ini.';
+    case 404:
+      return 'Data tidak ditemukan.';
+    case 408:
+      return 'Waktu permintaan habis. Periksa koneksi internet.';
+    case 409:
+      return 'Konflik data. Data yang Anda kirim sudah ada atau bentrok.';
+    case 422:
+      return null;
+    case 429:
+      return 'Terlalu banyak permintaan. Tunggu sebentar dan coba lagi.';
+    case 500:
+      return 'Terjadi kesalahan di server. Coba lagi nanti.';
+    case 502:
+      return 'Server tidak dapat dijangkau (502). Coba lagi nanti.';
+    case 503:
+      return 'Layanan tidak tersedia sementara. Coba beberapa saat lagi.';
+    default:
+      return `Terjadi kesalahan (${status}). Silakan coba lagi.`;
   }
 };
 
-// ─── CORE REQUEST FUNCTION ────────────────────────────────────────────────────
 const request = async (method, endpoint, body = null, isMultipart = false) => {
+  const normalizedEndpoint = endpoint.replace(/\/+$/, '');
+  const isLoginRequest =
+    normalizedEndpoint === 'auth/login' || normalizedEndpoint.endsWith('/auth/login');
   const headers = await buildHeaders(isMultipart);
-  const url = `${BASE_URL}${endpoint}`;
 
+  if (isLoginRequest) {
+    delete headers.Authorization;
+  }
+
+  const url = `${BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
   const options = {
     method,
     headers,
   };
 
-  if (body) {
+  if (body !== null) {
     options.body = isMultipart ? body : JSON.stringify(body);
   }
 
   try {
     const response = await withTimeout(fetch(url, options));
 
-    // 401 → token expired / tidak valid
-    if (response.status === 401) {
-      await AsyncStorage.multiRemove(['sigap_auth_token', 'sigap_user']);
+    if (response.status === 401 && !isLoginRequest) {
+      await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
       throw new Error('Sesi berakhir. Silakan login kembali.');
     }
 
-    // 403 → tidak punya akses
-    if (response.status === 403) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(data.message || 'Akses ditolak. Anda tidak memiliki izin untuk tindakan ini.');
-    }
-
-    // 404 → tidak ditemukan
-    if (response.status === 404) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(data.message || 'Data tidak ditemukan.');
-    }
-
-    // 422 → Validation error dari Laravel
-    if (response.status === 422) {
-      const msg = await parseError(response);
-      throw new Error(msg);
-    }
-
-    // 5xx → Server error
-    if (response.status >= 500) {
-      const fallback = mapHttpError(response.status);
-      const data = await response.json().catch(() => ({}));
-      throw new Error(data.message || fallback);
-    }
-
-    // Error lain dari server
     if (!response.ok) {
-      const msg = await parseError(response);
-      const fallback = mapHttpError(response.status);
-      throw new Error(msg || fallback);
+      const message = await parseError(response);
+      throw new Error(message || mapHttpError(response.status));
     }
 
-    // 204 No Content
     if (response.status === 204) return null;
 
     return await response.json();
   } catch (error) {
-    // Network error (tidak ada koneksi / server mati)
-    if (error.message === 'Network request failed') {
-      throw new Error('Tidak dapat terhubung ke server. Periksa koneksi internet Anda.');
+    if (
+      error instanceof TypeError &&
+      /network request failed|failed to fetch/i.test(error.message)
+    ) {
+      throw new Error(
+        'Tidak dapat terhubung ke server. Pastikan HP dan laptop berada di Wi-Fi yang sama, lalu periksa server Laravel.'
+      );
     }
-    // Lempar kembali error yang sudah diformat
+
     throw error;
   }
 };
 
-// ─── PUBLIC API ───────────────────────────────────────────────────────────────
 const api = {
   get: (endpoint) => request('GET', endpoint),
   post: (endpoint, body) => request('POST', endpoint, body),

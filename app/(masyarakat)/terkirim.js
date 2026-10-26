@@ -6,28 +6,12 @@ import {
   SafeAreaView,
   TouchableOpacity,
   StatusBar,
-  Dimensions,
-  Alert,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import * as Clipboard from 'expo-clipboard';
-
-const { width } = Dimensions.get('window');
+import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 const HalamanTerkirim = () => {
   const router = useRouter();
-  const { reportId } = useLocalSearchParams();
-  const idLaporan = reportId || "PUPR-20231024-001";
-
-  const salinKeClipboard = async () => {
-    try {
-      await Clipboard.setStringAsync(idLaporan);
-      Alert.alert("Berhasil", "ID Laporan disalin ke papan klip");
-    } catch (error) {
-      Alert.alert("Gagal", "Gagal menyalin ID Laporan");
-    }
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -47,15 +31,6 @@ const HalamanTerkirim = () => {
           Terima kasih atas partisipasi Anda. Laporan infrastruktur Anda telah kami terima dan akan segera diproses.
         </Text>
 
-        {/* KARTU ID LAPORAN DENGAN FITUR SALIN */}
-        <View style={styles.idCard}>
-          <Text style={styles.idLabel}>ID LAPORAN</Text>
-          <TouchableOpacity style={styles.idRow} onPress={salinKeClipboard}>
-            <Text style={styles.idValue}>{idLaporan}</Text>
-            <Icon name="content-copy" size={20} color="#1F3B6D" />
-          </TouchableOpacity>
-        </View>
-
         {/* TOMBOL NAVIGASI UTAMA */}
         <TouchableOpacity 
           style={styles.btnBeranda}
@@ -63,14 +38,6 @@ const HalamanTerkirim = () => {
         >
           <Icon name="home" size={20} color="#fff" style={styles.btnIcon} />
           <Text style={styles.btnTextBeranda}>Beranda</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.btnRiwayat}
-          onPress={() => router.push('/(masyarakat)/riwayat')}
-        >
-          <Icon name="history" size={20} color="#fff" style={styles.btnIcon} />
-          <Text style={styles.btnTextRiwayat}>Lihat Riwayat</Text>
         </TouchableOpacity>
 
         {/* FOOTER INFO - KEUNGGULAN SISTEM SIGAP */}
@@ -163,34 +130,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginBottom: 30,
   },
-  idCard: {
-    width: '100%',
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 18,
-    alignItems: 'center',
-    marginBottom: 35,
-    borderWidth: 1,
-    borderColor: '#EDF2FF',
-    elevation: 4,
-  },
-  idLabel: {
-    fontSize: 10,
-    color: '#9AA5B1',
-    fontWeight: 'bold',
-    letterSpacing: 1,
-    marginBottom: 5,
-  },
-  idRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  idValue: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#1F3B6D',
-  },
   btnBeranda: {
     width: '100%',
     height: 52,
@@ -201,24 +140,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  btnRiwayat: {
-    width: '100%',
-    height: 52,
-    backgroundColor: '#3E4A70',
-    borderRadius: 12,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   btnIcon: {
     marginRight: 8,
   },
   btnTextBeranda: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  btnTextRiwayat: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,

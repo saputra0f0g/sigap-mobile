@@ -1,6 +1,6 @@
 // app/(masyarakat)/_layout.js
 // Bottom tab navigator for Masyarakat (public reporters).
-// Tabs: HOME | RIWAYAT | LAPORAN | BANTUAN | PROFILE
+// Tabs: HOME | LAPORAN | PROFILE
 // Design: identical to original app/(tabs)/_layout.tsx
 
 import React from 'react';
@@ -23,23 +23,6 @@ function CustomHeader({ route, options, navigation }) {
           </TouchableOpacity>
         )}
         <Text style={styles.layoutHeaderTitle}>{title || 'SIGAP PUPR'}</Text>
-      </View>
-      
-      <View style={styles.headerRight}>
-        {!isDetail ? (
-          <TouchableOpacity>
-            <Ionicons name="notifications-outline" size={24} color="white" />
-          </TouchableOpacity>
-        ) : (
-          <>
-            <TouchableOpacity style={{ marginRight: 15 }}>
-              <Ionicons name="share-social-outline" size={22} color="white" />
-            </TouchableOpacity>
-            <TouchableOpacity>
-              <Ionicons name="ellipsis-vertical" size={22} color="white" />
-            </TouchableOpacity>
-          </>
-        )}
       </View>
     </View>
   );
@@ -72,32 +55,19 @@ export default function MasyarakatLayout() {
         }}
       />
       <Tabs.Screen
-        name="riwayat"
-        options={{
-          title: 'RIWAYAT',
-          headerTitle: 'Riwayat',
-          tabBarIcon: ({ color }) => (
-            <MaterialCommunityIcons name="history" size={24} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="lapor"
         options={{
           title: 'LAPORAN',
           headerTitle: 'Buat Laporan',
-          tabBarIcon: ({ color }) => (
-            <MaterialCommunityIcons name="plus-circle-outline" size={24} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="bantuan"
-        options={{
-          title: 'BANTUAN',
-          headerTitle: 'Pusat Bantuan',
-          tabBarIcon: ({ color }) => (
-            <MaterialCommunityIcons name="help-circle-outline" size={24} color={color} />
+          tabBarLabelStyle: { fontWeight: '700' },
+          tabBarIcon: ({ focused }) => (
+            <View style={styles.reportTabIcon}>
+              <MaterialCommunityIcons
+                name="plus"
+                size={27}
+                color={focused ? '#1F3B6D' : '#526781'}
+              />
+            </View>
           ),
         }}
       />
@@ -140,5 +110,22 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-  }
+  },
+  reportTabIcon: {
+    width: 54,
+    height: 54,
+    marginTop: -25,
+    marginBottom: 2,
+    borderRadius: 27,
+    backgroundColor: '#F4B942',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#17345F',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 8,
+  },
 });

@@ -1,1 +1,0 @@
-﻿import React from 'react';import {View,Text} from 'react-native';const BerandaScreen=()=><View style={{flex:1,justifyContent:'center',alignItems:'center'}}><Text>Beranda Masyarakat</Text></View>;export default BerandaScreen;

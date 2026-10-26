@@ -25,12 +25,11 @@ export default function Index() {
     return <Redirect href="/(auth)/login" />;
   }
 
-  // Logged in as pegawai → go to pegawai dashboard
-  if (userRole === 'pegawai') {
-    return <Redirect href="/(pegawai)/beranda" />;
+  // Only masyarakat accounts can use the mobile app.
+  if (userRole !== 'masyarakat') {
+    return <Redirect href="/(auth)/login" />;
   }
 
-  // Logged in as masyarakat (default) → go to masyarakat dashboard
   return <Redirect href="/(masyarakat)/beranda" />;
 }
 

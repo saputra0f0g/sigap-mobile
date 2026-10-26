@@ -57,38 +57,6 @@ const authService = {
     return await api.get('/auth/me');
   },
 
-  /**
-   * Kirim OTP ke email/WA untuk reset password
-   * @param {{ email }} data
-   */
-  forgotPassword: async (data) => {
-    return await api.post('/auth/forgot-password', { email: data.email });
-  },
-
-  /**
-   * Verifikasi kode OTP
-   * @param {{ email, code }} data
-   */
-  verifyOtp: async (data) => {
-    return await api.post('/auth/verify-otp', {
-      email: data.email,
-      code:  data.code,
-    });
-  },
-
-  /**
-   * Reset password dengan token baru
-   * @param {{ email, code, password, password_confirmation }} data
-   */
-  resetPassword: async (data) => {
-    return await api.post('/auth/reset-password', {
-      email:                 data.email,
-      code:                  data.code,
-      password:              data.password,
-      password_confirmation: data.passwordConfirmation,
-    });
-  },
-
 };
 
 export default authService;

@@ -8,9 +8,6 @@ export default function AuthLayout() {
     <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
       <Stack.Screen name="login" />
       <Stack.Screen name="register" />
-      <Stack.Screen name="lupa-sandi" />
-      <Stack.Screen name="kode-pemulihan" />
-      <Stack.Screen name="atur-ulang-sandi" />
       <Stack.Screen name="sukses" />
     </Stack>
   );

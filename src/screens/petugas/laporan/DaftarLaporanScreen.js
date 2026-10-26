@@ -1,1 +1,0 @@
-﻿import React from 'react';import {View,Text} from 'react-native';const DaftarLaporanScreen=()=><View style={{flex:1,justifyContent:'center',alignItems:'center'}}><Text>Daftar Laporan Masuk</Text></View>;export default DaftarLaporanScreen;

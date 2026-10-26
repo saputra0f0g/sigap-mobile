@@ -5,7 +5,7 @@
  * Manages:
  *   - isAuthenticated  : boolean
  *   - isLoading        : boolean (true while restoring session from AsyncStorage)
- *   - userRole         : 'masyarakat' | 'pegawai' | null
+ *   - userRole         : 'masyarakat' | null
  *   - user             : full user object dari Laravel API
  *
  * ─── MODE ───────────────────────────────────────────────────────────────────
@@ -53,6 +53,11 @@ export const AuthProvider = ({ children }) => {
 
         if (token && storedUser) {
           const parsedUser = JSON.parse(storedUser);
+          if (parsedUser.role !== 'masyarakat') {
+            await AsyncStorage.multiRemove([STORAGE_KEYS.TOKEN, STORAGE_KEYS.USER]);
+            return;
+          }
+
           setUser(parsedUser);
           setUserRole(parsedUser.role);
           setIsAuthenticated(true);
@@ -77,7 +82,7 @@ export const AuthProvider = ({ children }) => {
         name: credentials.email ?? credentials.username,
         email: credentials.email ?? credentials.username + '@sigap.id',
         phone: '08123456789',
-        role: 'masyarakat', // Ganti ke 'pegawai' untuk tes flow pegawai
+        role: 'masyarakat',
       };
       setUser(mockUser);
       setUserRole(mockUser.role);
@@ -90,13 +95,16 @@ export const AuthProvider = ({ children }) => {
     // response = { user: {...}, token: 'string' }
 
     const { user: loggedInUser, token } = response;
+    if (loggedInUser?.role !== 'masyarakat') {
+      throw new Error('Aplikasi mobile hanya dapat digunakan oleh masyarakat.');
+    }
 
     // Simpan ke AsyncStorage untuk restore sesi setelah restart
     await AsyncStorage.setItem(STORAGE_KEYS.TOKEN, token);
     await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(loggedInUser));
 
     setUser(loggedInUser);
-    setUserRole(loggedInUser.role); // 'masyarakat' | 'pegawai'
+    setUserRole(loggedInUser.role);
     setIsAuthenticated(true);
 
     return loggedInUser;

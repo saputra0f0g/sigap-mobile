@@ -4,12 +4,7 @@
  * Responsibilities:
  * 1. Wraps the entire app in <AuthProvider>
  * 2. Registers all route groups with <Stack>
- * 3. Guards routes using useSegments + useEffect:
- *    - Unauthenticated → /(auth)/login
- *    - Role 'masyarakat' + in auth group → /(masyarakat)/beranda
- *    - Role 'pegawai' + in auth group    → /(pegawai)/beranda
- *    - Role 'pegawai' + in masyarakat   → /(pegawai)/beranda  (cross-role guard)
- *    - Role 'masyarakat' + in pegawai   → /(masyarakat)/beranda
+ * 3. Guards routes so only masyarakat accounts can access the app.
  */
 
 import React, { useEffect } from 'react';
@@ -27,33 +22,19 @@ function RouteGuard() {
     // Don't redirect while restoring session from AsyncStorage
     if (isLoading) return;
 
-    const inAuthGroup      = segments[0] === '(auth)';
-    const inMasyarakatGroup = segments[0] === '(masyarakat)';
-    const inPegawaiGroup   = segments[0] === '(pegawai)';
+    const inAuthGroup = segments[0] === '(auth)';
 
-    if (!isAuthenticated) {
-      // ── Not logged in → force to login ──────────────────────────────────
+    if (!isAuthenticated || userRole !== 'masyarakat') {
       if (!inAuthGroup) {
         router.replace('/(auth)/login');
       }
-    } else {
-      // ── Logged in ────────────────────────────────────────────────────────
-      if (inAuthGroup) {
-        // Just logged in — send to correct dashboard
-        if (userRole === 'pegawai') {
-          router.replace('/(pegawai)/beranda');
-        } else {
-          router.replace('/(masyarakat)/beranda');
-        }
-      } else if (userRole === 'pegawai' && inMasyarakatGroup) {
-        // Pegawai somehow accessed masyarakat routes → redirect
-        router.replace('/(pegawai)/beranda');
-      } else if (userRole === 'masyarakat' && inPegawaiGroup) {
-        // Masyarakat somehow accessed pegawai routes → redirect
-        router.replace('/(masyarakat)/beranda');
-      }
+      return;
     }
-  }, [isAuthenticated, userRole, isLoading, segments]);
+
+    if (inAuthGroup) {
+      router.replace('/(masyarakat)/beranda');
+    }
+  }, [isAuthenticated, userRole, isLoading, segments, router]);
 
   return null; // Pure logic component, renders nothing
 }
@@ -73,8 +54,7 @@ export default function RootLayout() {
         {/* Masyarakat group — Bottom tabs for public reporters */}
         <Stack.Screen name="(masyarakat)" options={{ headerShown: false }} />
 
-        {/* Pegawai group — Bottom tabs for PUPR staff */}
-        <Stack.Screen name="(pegawai)" options={{ headerShown: false }} />
+
       </Stack>
     </AuthProvider>
   );

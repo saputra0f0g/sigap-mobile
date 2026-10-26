@@ -7,7 +7,6 @@
  *   PUT   /api/user/profil         → Update profil (nama, telp)
  *   POST  /api/user/foto-profil    → Upload foto profil (multipart)
  *   PUT   /api/user/password       → Ganti password
- *   GET   /api/pegawai             → Daftar pegawai (admin only)
  */
 
 import api from './api';
@@ -60,12 +59,6 @@ const userService = {
     });
   },
 
-  /**
-   * Daftar semua pegawai — hanya bisa diakses admin/supervisor
-   */
-  getDaftarPegawai: async () => {
-    return await api.get('/pegawai');
-  },
 
 };
 

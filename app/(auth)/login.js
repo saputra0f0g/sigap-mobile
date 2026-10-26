@@ -53,16 +53,8 @@ const HalamanLogin = () => {
 
     setLoading(true);
     try {
-      // login() dari AuthContext — setelah berhasil, index.js akan redirect
-      // ke group yang sesuai dengan userRole.
-      const loggedUser = await login({ username, password });
-
-      // Redirect eksplisit berdasarkan role
-      if (loggedUser.role === 'pegawai') {
-        router.replace('/(pegawai)/beranda');
-      } else {
-        router.replace('/(masyarakat)/beranda');
-      }
+      await login({ username, password });
+      router.replace('/(masyarakat)/beranda');
 
       setUsername('');
       setPassword('');
@@ -74,7 +66,6 @@ const HalamanLogin = () => {
     }
   };
 
-  const handleLupaPassword = () => router.push('/(auth)/lupa-sandi');
   const handleDaftar = () => router.push('/(auth)/register');
 
   return (
@@ -143,10 +134,6 @@ const HalamanLogin = () => {
             {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
           </View>
 
-          <TouchableOpacity onPress={handleLupaPassword} disabled={loading}>
-            <Text style={styles.lupaPasswordText}>Lupa Kata Sandi?</Text>
-          </TouchableOpacity>
-
           <TouchableOpacity
             style={[styles.loginButton, loading && styles.loginButtonDisabled]}
             onPress={handleLogin}
@@ -193,7 +180,6 @@ const styles = StyleSheet.create({
   inputIcon: { marginRight: 10 },
   input: { flex: 1, fontSize: 14, color: '#333', padding: 0 },
   errorText: { color: '#ff6b6b', fontSize: 12, marginTop: 6, marginLeft: 4 },
-  lupaPasswordText: { fontSize: 13, color: '#1F3B6D', fontWeight: '600', textAlign: 'right', marginBottom: 20 },
   loginButton: {
     backgroundColor: '#F4C430', paddingVertical: 14, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center', marginTop: 10, marginBottom: 20,

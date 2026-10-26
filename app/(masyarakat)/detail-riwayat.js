@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   View, 
   Text, 
   ScrollView, 
+  RefreshControl,
   TouchableOpacity, 
   SafeAreaView, 
   StyleSheet, 
   Image, 
   Dimensions,
-  ActivityIndicator
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { 
   Ionicons, 
@@ -18,6 +20,7 @@ import {
 } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import laporanService from '../../services/laporanService';
+import { getPublicFileUrl } from '../../services/api';
 import MapTilerWebView from '../../components/MapTilerWebView';
 
 import { Linking } from 'react-native';
@@ -29,24 +32,42 @@ export default function HalamanDetailRiwayat() {
   const { id } = useLocalSearchParams();
   const [laporan, setLaporan] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchDetail = () => {
-    if (id) {
+  const fetchDetail = useCallback(async (pullToRefresh = false) => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+
+    if (pullToRefresh) {
+      setRefreshing(true);
+    } else {
       setLoading(true);
       setError(null);
-      laporanService.getDetail(id)
-        .then(res => setLaporan(res.data || res))
-        .catch(err => setError(err.message || 'Gagal memuat detail laporan. Periksa koneksi Anda.'))
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
     }
-  };
+
+    try {
+      const response = await laporanService.getDetail(id);
+      setLaporan(response?.data ?? response?.laporan ?? response);
+      setError(null);
+    } catch (err) {
+      const message = err.message || 'Gagal memuat detail laporan. Periksa koneksi Anda.';
+      if (pullToRefresh) {
+        Alert.alert('Gagal memperbarui', message);
+      } else {
+        setError(message);
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [id]);
 
   useEffect(() => {
     fetchDetail();
-  }, [id]);
+  }, [fetchDetail]);
 
   if (loading) {
     return (
@@ -82,36 +103,60 @@ export default function HalamanDetailRiwayat() {
     );
   }
 
-  // Helpers untuk UI status
-  const isSelesai = laporan.status_raw === 'selesai';
-  const isProses  = laporan.status_raw === 'diproses';
-  const isTolak   = laporan.status_raw === 'ditolak';
+  const status = laporan.status;
+  const isSelesai = status === 'selesai';
+  const isDitolak = status === 'ditolak';
+  const fotoPenangananRaw = (
+    laporan.foto_penanganan_urls
+    ?? laporan.foto_penanganan
+    ?? []
+  );
+  const fotoPenanganan = (Array.isArray(fotoPenangananRaw)
+    ? fotoPenangananRaw
+    : [fotoPenangananRaw]
+  ).map(getPublicFileUrl).filter(Boolean);
 
-  let statusTitle = "Menunggu Verifikasi";
-  let statusDesc  = "Laporan Anda sedang menunggu verifikasi oleh tim.";
-  let statusIcon  = "access-time";
-  let statusColor = "#F59E0B";
+  let statusTitle = 'Menunggu Verifikasi';
+  let statusDesc = 'Laporan Anda sedang menunggu verifikasi oleh tim.';
+  let statusIcon = 'access-time';
+  let statusColor = '#F59E0B';
 
-  if (isSelesai) {
-    statusTitle = "Selesai Dikerjakan";
-    statusDesc  = "Laporan Anda telah berhasil diverifikasi dan diselesaikan.";
-    statusIcon  = "check-circle";
-    statusColor = "#10B981";
-  } else if (isProses) {
-    statusTitle = "Sedang Diproses";
-    statusDesc  = "Laporan Anda sedang ditangani oleh tim teknis.";
-    statusIcon  = "engineering";
-    statusColor = "#3B82F6";
-  } else if (isTolak) {
-    statusTitle = "Laporan Ditolak";
-    statusDesc  = laporan.catatan || "Laporan tidak memenuhi kriteria verifikasi.";
-    statusIcon  = "cancel";
-    statusColor = "#EF4444";
+  if (status === 'diverifikasi') {
+    statusTitle = 'Laporan Diverifikasi';
+    statusDesc = 'Laporan telah diverifikasi dan menunggu penanganan.';
+    statusIcon = 'fact-check';
+    statusColor = '#3B82F6';
+  } else if (status === 'dalam_perbaikan') {
+    statusTitle = 'Dalam Perbaikan';
+    statusDesc = 'Laporan sedang ditangani oleh tim teknis.';
+    statusIcon = 'engineering';
+    statusColor = '#F97316';
+  } else if (isSelesai) {
+    statusTitle = 'Selesai Dikerjakan';
+    statusDesc = 'Laporan Anda telah berhasil ditangani.';
+    statusIcon = 'check-circle';
+    statusColor = '#10B981';
+  } else if (isDitolak) {
+    statusTitle = 'Laporan Ditolak';
+    statusDesc = laporan.alasan_penolakan || laporan.catatan_admin || 'Laporan tidak memenuhi kriteria verifikasi.';
+    statusIcon = 'cancel';
+    statusColor = '#EF4444';
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => fetchDetail(true)}
+            colors={['#3B466D']}
+            tintColor="#3B466D"
+          />
+        }
+      >
         
         {/* Status & ID Header */}
         <View style={styles.headerCards}>
@@ -121,7 +166,7 @@ export default function HalamanDetailRiwayat() {
             </View>
             <View style={styles.statusContent}>
               <View style={[styles.badgeSelesai, { backgroundColor: statusColor + '20' }]}>
-                <Text style={[styles.badgeText, { color: statusColor }]}>{laporan.status}</Text>
+                <Text style={[styles.badgeText, { color: statusColor }]}>{laporan.label_status || laporan.status}</Text>
               </View>
               <Text style={styles.statusTitle}>{statusTitle}</Text>
               <Text style={styles.statusDesc}>{statusDesc}</Text>
@@ -134,7 +179,7 @@ export default function HalamanDetailRiwayat() {
             <Text style={[styles.idLabel, { marginTop: 10 }]}>KATEGORI</Text>
             <View style={styles.categoryRow}>
               <Ionicons name="home" size={14} color="#3B466D" />
-              <Text style={styles.categoryText}>{laporan.kategori || 'Umum'}</Text>
+              <Text style={styles.categoryText}>{laporan.label_jenis || laporan.jenis_kerusakan || 'Lainnya'}</Text>
             </View>
           </View>
         </View>
@@ -154,6 +199,34 @@ export default function HalamanDetailRiwayat() {
             <View style={[styles.mainImage, { backgroundColor: '#E2E8F0', justifyContent: 'center', alignItems: 'center' }]}>
               <Text style={{ color: '#94A3B8' }}>Tidak ada foto</Text>
             </View>
+          )}
+        </View>
+
+        <View style={styles.adminDocumentationCard}>
+          <View style={styles.sectionTitleRow}>
+            <MaterialIcons name="engineering" size={18} color="#10B981" />
+            <Text style={styles.adminDocumentationTitle}>Dokumentasi Admin / Petugas</Text>
+          </View>
+          {fotoPenanganan.length > 0 ? (
+            <View style={styles.adminPhotoGrid}>
+              {fotoPenanganan.map((fotoUrl, index) => (
+                <Image
+                  key={`${laporan.id}-${index}`}
+                  source={{ uri: fotoUrl }}
+                  style={styles.adminPhoto}
+                  resizeMode="cover"
+                  onLoad={() => console.log('FOTO BERHASIL:', fotoUrl)}
+                  onError={(event) => {
+                    console.log('FOTO GAGAL:', fotoUrl);
+                    console.log('ERROR:', event.nativeEvent.error);
+                  }}
+                />
+              ))}
+            </View>
+          ) : (
+            <Text style={styles.noAdminPhotos}>
+              Belum ada foto dokumentasi dari admin atau petugas.
+            </Text>
           )}
         </View>
 
@@ -203,7 +276,7 @@ export default function HalamanDetailRiwayat() {
             <View style={styles.timelineRight}>
               <View style={[styles.timelineContentCard, { borderLeftColor: statusColor }]}>
                 <View style={styles.timelineHeader}>
-                  <Text style={[styles.timelineStatus, { color: statusColor }]}>{laporan.status}</Text>
+                  <Text style={[styles.timelineStatus, { color: statusColor }]}>{laporan.label_status || laporan.status}</Text>
                   <Text style={styles.timelineDate}>{laporan.tanggal}</Text>
                 </View>
                 <Text style={styles.timelineDesc}>{statusDesc}</Text>
@@ -240,13 +313,13 @@ export default function HalamanDetailRiwayat() {
         {/* Tombol diganti menjadi Kembali ke Dashboard */}
         <TouchableOpacity 
           style={styles.btnSecondary} 
-          onPress={() => router.replace('/(masyarakat)/riwayat')}
+          onPress={() => router.back()}
         >
           <Text style={styles.btnTextSecondary}>Kembali ke Dashboard</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.btnPrimary} onPress={() => {
-          const phoneNumber = '6281234567890'; // Nomor petugas
+          const phoneNumber = '6285221089204'; // Nomor petugas
           const message = `Halo, saya pelapor untuk laporan dengan kode ${laporan.kode_laporan}. Saya ingin bertanya progresnya.`;
           Linking.openURL(`whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(message)}`).catch(() => {
             Alert.alert('Gagal', 'WhatsApp tidak terinstall.');
@@ -302,6 +375,11 @@ const styles = StyleSheet.create({
   moreImageContainer: { flex: 1, position: 'relative' },
   imageOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   overlayText: { color: 'white', fontWeight: 'bold', fontSize: 18 },
+  adminDocumentationCard: { backgroundColor: 'white', borderRadius: 16, padding: 14, marginBottom: 20, elevation: 2 },
+  adminDocumentationTitle: { marginLeft: 6, fontWeight: 'bold', color: '#047857', fontSize: 13 },
+  adminPhotoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12,},
+  adminPhoto: {width: 150, height: 150, borderRadius: 10, backgroundColor: '#E2E8F0',},
+  noAdminPhotos: { color: '#94A3B8', fontSize: 11, marginTop: 12 },
 
   infoCard: { backgroundColor: 'white', borderRadius: 16, padding: 16, elevation: 2, marginBottom: 20 },
   infoTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
@@ -348,7 +426,8 @@ const styles = StyleSheet.create({
   btnSecondary: { flex: 1, height: 45, justifyContent: 'center', alignItems: 'center', borderRadius: 12, backgroundColor: '#3B466D', marginRight: 10 },
   btnPrimary: { flex: 1, height: 45, justifyContent: 'center', alignItems: 'center', borderRadius: 12, backgroundColor: '#FBBF24' },
   btnTextSecondary: { color: 'white', fontWeight: 'bold', fontSize: 12, textAlign: 'center' },
-  btnTextPrimary: { color: '#3B466D', fontWeight: 'bold' }
+  btnTextPrimary: { color: '#3B466D', fontWeight: 'bold' },
+
   retryBtn: {
     marginTop: 20,
     backgroundColor: '#3B466D',

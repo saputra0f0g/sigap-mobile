@@ -1,1 +1,0 @@
-﻿import React from 'react';import {View,Text} from 'react-native';const DashboardScreen=()=><View style={{flex:1,justifyContent:'center',alignItems:'center'}}><Text>Dashboard Petugas</Text></View>;export default DashboardScreen;
